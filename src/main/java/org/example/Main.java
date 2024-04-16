@@ -98,15 +98,13 @@ public class Main {
         }
     }
 }*/
-import java.io.File;
+
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -115,66 +113,74 @@ public class Main {
     public static void main(String[] args) {
 
         try {
-            FileInputStream fileInput = new FileInputStream(new File("Lab7.xlsx"));
-            XSSFWorkbook workbookInput = new XSSFWorkbook(fileInput);
-            XSSFSheet sheetInput = workbookInput.getSheetAt(0);
+            FileInputStream file = new FileInputStream("Lab7.xlsx");
+            XSSFWorkbook inputWorkbook = new XSSFWorkbook(file);
+            XSSFSheet inputSheet = inputWorkbook.getSheetAt(0);
 
-            // Crearea listei pentru elementele de adăugat în a treia coloană
-            List<String> elements = new ArrayList<>();
-            elements.add("1A");
-            elements.add("2B");
-            elements.add("3C");
-            elements.add("6");
+            XSSFWorkbook outputWorkbook = new XSSFWorkbook();
+            XSSFSheet outputSheet = outputWorkbook.createSheet("Lab7-out");
 
-            FileInputStream fileOutput = new FileInputStream(new File("Lab7-out.xlsx"));
-            XSSFWorkbook workbookOutput = new XSSFWorkbook(fileOutput);
-            XSSFSheet sheetOutput = workbookOutput.getSheetAt(0);
+            FormulaEvaluator formulaEvaluator = inputWorkbook.getCreationHelper().createFormulaEvaluator();
 
-            Iterator<Row> rowIterator = sheetInput.iterator();
-            int rowIndexOutput = 0;
-
-            while (rowIterator.hasNext()) {
-                Row rowInput = rowIterator.next();
-                Row rowOutput = sheetOutput.createRow(rowIndexOutput++);
-
-                Iterator<Cell> cellIterator = rowInput.cellIterator();
-                int cellIndex = 0;
-
-                while (cellIterator.hasNext()) {
-                    Cell cellInput = cellIterator.next();
-                    Cell cellOutput = rowOutput.createCell(cellIndex++);
-
-                    switch (cellInput.getCellType()) {
+            int rowNum = 0;
+            for (Row row : inputSheet) {
+                Row outputRow = outputSheet.createRow(rowNum++);
+                Cell cell1 = row.getCell(0);
+                Cell cell2 = row.getCell(1);
+                String concatenatedValue = "";
+                if (cell1 != null) {
+                    switch (cell1.getCellType()) {
                         case NUMERIC:
-                            cellOutput.setCellValue(cellInput.getNumericCellValue());
+                            concatenatedValue += (int) cell1.getNumericCellValue();
                             break;
                         case STRING:
-                            cellOutput.setCellValue(cellInput.getStringCellValue());
+                            concatenatedValue += cell1.getStringCellValue();
                             break;
                         case FORMULA:
-                            cellOutput.setCellValue(cellInput.getCellFormula());
-                            break;
-                        default:
+                            switch (formulaEvaluator.evaluate(cell1).getCellType()) {
+                                case NUMERIC:
+                                    concatenatedValue += (int) formulaEvaluator.evaluate(cell1).getNumberValue();
+                                    break;
+                                case STRING:
+                                    concatenatedValue += formulaEvaluator.evaluate(cell1).getStringValue();
+                                    break;
+                            }
                             break;
                     }
                 }
-
-                // Adăugarea elementelor în a treia coloană
-                Cell cellOutput = rowOutput.createCell(cellIndex);
-                if (!elements.isEmpty()) {
-                    String element = elements.remove(0);
-                    cellOutput.setCellValue(element);
+                if (cell2 != null) {
+                    switch (cell2.getCellType()) {
+                        case NUMERIC:
+                            concatenatedValue += (int) cell2.getNumericCellValue();
+                            break;
+                        case STRING:
+                            concatenatedValue += cell2.getStringCellValue();
+                            break;
+                        case FORMULA:
+                            switch (formulaEvaluator.evaluate(cell2).getCellType()) {
+                                case NUMERIC:
+                                    concatenatedValue += (int) formulaEvaluator.evaluate(cell2).getNumberValue();
+                                    break;
+                                case STRING:
+                                    concatenatedValue += formulaEvaluator.evaluate(cell2).getStringValue();
+                                    break;
+                            }
+                            break;
+                    }
                 }
+                outputRow.createCell(0).setCellValue(concatenatedValue);
             }
 
-            fileInput.close();
-            fileOutput.close();
+            FileOutputStream outputFile = new FileOutputStream("Lab7-out.xlsx");
+            outputWorkbook.write(outputFile);
+            outputFile.close();
 
-            FileOutputStream outputStream = new FileOutputStream("Lab7-out.xlsx");
-            workbookOutput.write(outputStream);
-            workbookOutput.close();
-            outputStream.close();
-        } catch (IOException e) {
+            file.close();
+            inputWorkbook.close();
+            outputWorkbook.close();
+
+            System.out.println("Datele au fost scrise cu succes în rezultat.xlsx");
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
